@@ -1,0 +1,361 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  email        String   @unique
+  hash         String
+  name         String
+  phone        String
+  language     String   @default("en")
+  isPremium    Boolean  @default(false)
+  isFirstLogin Boolean  @default(true)
+  examId       String   @default("691893a95a0232b7b02e82d8") @db.ObjectId // Reference to Exam model
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relationship with Exam
+  exam                Exam                @relation(fields: [examId], references: [id], onDelete: Restrict)
+  // Many-to-many relationship with Job through BookmarkJob
+  bookmarkedJobs      BookmarkJob[]
+  // Many-to-many relationship with Question through BookmarkQuestion
+  bookmarkedQuestions BookmarkQuestion[]
+  // Many-to-many relationship with Exam through LikeExam
+  likedExams          LikeExam[]
+  // Many-to-many relationship with TestSeries through LikeTestSeries
+  likedTestSeries     LikeTestSeries[]
+  // Test attempts
+  testAttempts        TestAttempt[]
+
+  @@map("users")
+}
+
+model Job {
+  id              String          @id @default(auto()) @map("_id") @db.ObjectId
+  heading         String
+  companyName     String
+  companyLogoUrl  String?
+  companyDetails  String?
+  lastDateToApply DateTime
+  youtubeVideoUrl String?
+  tags            String[]        @default([])
+  // Array of job openings
+  openings        Opening[]
+  // Array of important dates
+  importantDates  ImportantDate[]
+  // Array of important links
+  importantLinks  ImportantLink[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Many-to-many relationship with User through BookmarkJob
+  bookmarkedBy BookmarkJob[]
+
+  @@map("jobs")
+}
+
+model Opening {
+  id                  String @id @default(auto()) @map("_id") @db.ObjectId
+  jobId               String @db.ObjectId
+  nameOfPost          String
+  totalPost           Int
+  salary              String
+  jobDetails          String
+  eligibilityCriteria String
+  location            String
+  job                 Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@map("openings")
+}
+
+model ImportantDate {
+  id    String   @id @default(auto()) @map("_id") @db.ObjectId
+  jobId String   @db.ObjectId
+  event String
+  date  DateTime
+  job   Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@map("important_dates")
+}
+
+model ImportantLink {
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  jobId String @db.ObjectId
+  name  String
+  link  String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@map("important_links")
+}
+
+model BookmarkJob {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  jobId     String   @db.ObjectId
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  // Ensure a user can only bookmark a job once
+  @@unique([userId, jobId])
+  @@map("bookmark_jobs")
+}
+
+model Exam {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  name           String // e.g., "SI", "CONSTABLE", "GRADE3&4", "TET"
+  organization   String
+  image          String?
+  description    String?
+  price          Float    @default(0)
+  totalQuestion  Int      @default(0)
+  totalMockTests Int      @default(0)
+  rating         Float    @default(0)
+  likeCount      Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  subjects      Subject[]
+  likedBy       LikeExam[]
+  notifications Notification[]
+  testSeries    TestSeries[]
+  // One-to-many relationship with User
+  users         User[]
+
+  @@map("exams")
+}
+
+model Subject {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  examId      String   @db.ObjectId
+  name        String
+  description String?
+  isPremium   Boolean  @default(false)
+  lessonCount Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  exam    Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@map("subjects")
+}
+
+model Lesson {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  subjectId     String   @db.ObjectId
+  name          String
+  description   String?
+  tags          String[] @default([])
+  questionCount Int      @default(0)
+  totalTime     Int? // Total time in seconds
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  subject   Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  questions Question[]
+
+  @@map("lessons")
+}
+
+model Question {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  lessonId     String    @db.ObjectId
+  type         String // 'mcq', 'multiple_select', 'coding', 'subjective', 'true_false', 'fill_blank'
+  statement    String // The question text
+  tag          String? // Tag for the question
+  metadata     Json? // Question-specific data:
+  // For MCQ: { options: [{id, text}], correctOption: [option_id1, option_id2, ...] }
+  // For Coding: { language: 'javascript', starterCode: '...', testCases: [...] }
+  // For Subjective: { rubric: '...', keyPoints: [...] }
+  marks        Int       @default(1) // Marks allocated for this question
+  expectedTime Int? // Expected time to answer in seconds
+  isActive     Boolean   @default(true) // Can be used to disable questions without deleting
+  isDeleted    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  lesson       Lesson             @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  bookmarkedBy BookmarkQuestion[]
+  testQuestions TestQuestion[]
+
+  @@map("questions")
+}
+
+model BookmarkQuestion {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String   @db.ObjectId
+  questionId String   @db.ObjectId
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  // Ensure a user can only bookmark a question once
+  @@unique([userId, questionId])
+  @@map("bookmark_questions")
+}
+
+model LikeExam {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  examId    String   @db.ObjectId
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  // Ensure a user can only like an exam once
+  @@unique([userId, examId])
+  @@map("like_exams")
+}
+
+model LikeTestSeries {
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String     @db.ObjectId
+  testSeriesId String     @db.ObjectId
+  createdAt    DateTime   @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  testSeries TestSeries @relation(fields: [testSeriesId], references: [id], onDelete: Cascade)
+
+  // Ensure a user can only like a test series once
+  @@unique([userId, testSeriesId])
+  @@map("like_test_series")
+}
+
+model Notification {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  examId      String   @db.ObjectId
+  heading     String
+  description String?
+  url         String?
+  tags        String[] @default([])
+  status      String // e.g., 'active', 'inactive', 'draft', 'published'
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model TestSeries {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  examId       String   @db.ObjectId
+  name         String
+  organization String
+  description  String?
+  image        String?
+  isPremium    Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  likeCount    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  exam    Exam             @relation(fields: [examId], references: [id], onDelete: Cascade)
+  tests   Test[]
+  likedBy LikeTestSeries[]
+
+  @@map("test_series")
+}
+
+model Test {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  testSeriesId  String   @db.ObjectId
+  name          String
+  description   String?
+  duration      Int? // Duration in minutes
+  totalMarks    Int      @default(0)
+  totalQuestions Int     @default(0)
+  passingMarks  Int? // Passing marks threshold
+  difficulty    String? // Difficulty level: 'easy', 'medium', 'hard'
+  isPremium     Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  testSeries TestSeries     @relation(fields: [testSeriesId], references: [id], onDelete: Cascade)
+  questions  TestQuestion[]
+  attempts   TestAttempt[]
+
+  @@map("tests")
+}
+
+model TestQuestion {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  testId       String    @db.ObjectId
+  questionId   String?   @db.ObjectId // Optional reference to existing Question
+  type         String // 'mcq', 'multiple_select', 'coding', 'subjective', 'true_false', 'fill_blank'
+  statement    String // The question text
+  tag          String? // Tag for the question
+  metadata     Json? // Question-specific data:
+  // For MCQ: { options: [{id, text}], correctOption: [option_id1, option_id2, ...] }
+  // For Coding: { language: 'javascript', starterCode: '...', testCases: [...] }
+  // For Subjective: { rubric: '...', keyPoints: [...] }
+  marks        Int       @default(1) // Marks allocated for this question
+  expectedTime Int? // Expected time to answer in seconds
+  order        Int       @default(0) // Order of question in the test
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  test     Test          @relation(fields: [testId], references: [id], onDelete: Cascade)
+  question Question?     @relation(fields: [questionId], references: [id], onDelete: SetNull)
+  answers  TestAnswer[]
+
+  @@map("test_questions")
+}
+
+model TestAttempt {
+  id           String       @id @default(auto()) @map("_id") @db.ObjectId
+  testId       String       @db.ObjectId
+  userId       String       @db.ObjectId
+  startedAt    DateTime     @default(now())
+  submittedAt  DateTime?
+  timeSpent    Int? // Time spent in seconds
+  totalMarks   Float        @default(0)
+  obtainedMarks Float        @default(0)
+  percentage   Float? // Calculated percentage
+  status       String       @default("in_progress") // 'in_progress', 'completed', 'abandoned'
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  test   Test        @relation(fields: [testId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers TestAnswer[]
+
+  @@map("test_attempts")
+}
+
+model TestAnswer {
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
+  testAttemptId  String      @db.ObjectId
+  testQuestionId String      @db.ObjectId
+  answer         Json? // User's answer in JSON format
+  isCorrect      Boolean?
+  marksObtained  Float       @default(0)
+  timeSpent      Int? // Time spent on this question in seconds
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  testAttempt  TestAttempt  @relation(fields: [testAttemptId], references: [id], onDelete: Cascade)
+  testQuestion TestQuestion @relation(fields: [testQuestionId], references: [id], onDelete: Cascade)
+
+  @@map("test_answers")
+}
