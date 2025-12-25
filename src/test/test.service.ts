@@ -589,6 +589,7 @@ export class TestService {
           type: dto.type,
           statement: dto.statement,
           tag: dto.tag,
+          language: dto.language ?? 'en',
           metadata: dto.metadata,
           marks: dto.marks ?? 1,
           expectedTime: dto.expectedTime,
@@ -602,6 +603,7 @@ export class TestService {
           type: true,
           statement: true,
           tag: true,
+          language: true,
           metadata: true,
           marks: true,
           expectedTime: true,
@@ -692,6 +694,7 @@ export class TestService {
           type: true,
           statement: true,
           tag: true,
+          language: true,
           metadata: true,
           marks: true,
           expectedTime: true,
@@ -731,9 +734,18 @@ export class TestService {
 
   async getTestQuestionsList(
     testId: string,
+    userId: string,
     dto: GetTestQuestionsDto,
   ): Promise<GetTestQuestionsListResponse> {
     try {
+      // Get user's language preference
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { language: true },
+      });
+
+      const userLanguage = user?.language || 'en';
+
       const page = dto.page || 1;
       const limit = dto.limit || 10;
       const skip = (page - 1) * limit;
@@ -742,13 +754,15 @@ export class TestService {
       const total = await this.prisma.testQuestion.count({
         where: {
           testId,
+          language: userLanguage, // Filter by user's language
         },
       });
 
-      // Get test questions filtered by testId with pagination
+      // Get test questions filtered by testId and user's language with pagination
       const questions = await this.prisma.testQuestion.findMany({
         where: {
           testId,
+          language: userLanguage, // Filter by user's language
         },
         select: {
           id: true,
@@ -757,6 +771,7 @@ export class TestService {
           type: true,
           statement: true,
           tag: true,
+          language: true,
           metadata: true,
           marks: true,
           expectedTime: true,
@@ -825,6 +840,7 @@ export class TestService {
       if (dto.type !== undefined) updateData.type = dto.type;
       if (dto.statement !== undefined) updateData.statement = dto.statement;
       if (dto.tag !== undefined) updateData.tag = dto.tag;
+      if (dto.language !== undefined) updateData.language = dto.language;
       if (dto.metadata !== undefined) updateData.metadata = dto.metadata;
       if (dto.marks !== undefined) updateData.marks = dto.marks;
       if (dto.expectedTime !== undefined)
@@ -842,6 +858,7 @@ export class TestService {
           type: true,
           statement: true,
           tag: true,
+          language: true,
           metadata: true,
           marks: true,
           expectedTime: true,

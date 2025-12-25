@@ -178,6 +178,7 @@ model Question {
   type         String // 'mcq', 'multiple_select', 'coding', 'subjective', 'true_false', 'fill_blank'
   statement    String // The question text
   tag          String? // Tag for the question
+  language     String    @default("en") // Language of the question (e.g., 'en', 'hi', 'mr')
   metadata     Json? // Question-specific data:
   // For MCQ: { options: [{id, text}], correctOption: [option_id1, option_id2, ...] }
   // For Coding: { language: 'javascript', starterCode: '...', testCases: [...] }
@@ -304,6 +305,7 @@ model TestQuestion {
   type         String // 'mcq', 'multiple_select', 'coding', 'subjective', 'true_false', 'fill_blank'
   statement    String // The question text
   tag          String? // Tag for the question
+  language     String    @default("en") // Language of the question (e.g., 'en', 'hi', 'mr')
   metadata     Json? // Question-specific data:
   // For MCQ: { options: [{id, text}], correctOption: [option_id1, option_id2, ...] }
   // For Coding: { language: 'javascript', starterCode: '...', testCases: [...] }

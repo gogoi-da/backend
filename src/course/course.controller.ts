@@ -206,8 +206,11 @@ export class CourseController {
 
   @Get('questions')
   @GetQuestionsDocs
-  getQuestions(@Query() dto: GetQuestionsDto) {
-    return this.courseService.getQuestions(dto);
+  getQuestions(
+    @Query() dto: GetQuestionsDto,
+    @GetUser() user: { id: string },
+  ) {
+    return this.courseService.getQuestions(dto, user.id);
   }
 
   @Get('questions/:id')

@@ -40,6 +40,15 @@ export class UpdateQuestionDto {
   tag?: string;
 
   @ApiProperty({
+    description: 'Language of the question',
+    example: 'en',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  language?: string;
+
+  @ApiProperty({
     description: 'Question metadata (JSON object)',
     example: {
       options: [

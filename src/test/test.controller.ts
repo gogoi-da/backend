@@ -96,8 +96,9 @@ export class TestController {
   getTestQuestionsList(
     @Param('id') id: string,
     @Query() dto: GetTestQuestionsDto,
+    @GetUser() user: { id: string },
   ) {
-    return this.testService.getTestQuestionsList(id, dto);
+    return this.testService.getTestQuestionsList(id, user.id, dto);
   }
 
   @Post('tests/questions')

@@ -56,6 +56,16 @@ export class CreateTestQuestionDto {
   tag?: string;
 
   @ApiProperty({
+    description: 'Language of the question',
+    example: 'en',
+    default: 'en',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  language?: string;
+
+  @ApiProperty({
     description: 'Question-specific metadata (JSON object)',
     example: {
       options: [{ id: '1', text: 'Paris' }, { id: '2', text: 'London' }],

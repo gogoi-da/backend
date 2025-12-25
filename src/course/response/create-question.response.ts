@@ -35,6 +35,12 @@ class QuestionData {
   tag: string | null;
 
   @ApiProperty({
+    description: 'Language of the question',
+    example: 'en',
+  })
+  language: string;
+
+  @ApiProperty({
     description: 'Question metadata',
     example: {
       options: [

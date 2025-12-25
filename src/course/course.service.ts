@@ -886,6 +886,7 @@ export class CourseService {
           type: dto.type,
           statement: dto.statement,
           tag: dto.tag,
+          language: dto.language ?? 'en',
           metadata: dto.metadata || {},
           marks: dto.marks ?? 1,
           expectedTime: dto.expectedTime,
@@ -896,6 +897,7 @@ export class CourseService {
           type: true,
           statement: true,
           tag: true,
+          language: true,
           metadata: true,
           marks: true,
           expectedTime: true,
@@ -947,6 +949,7 @@ export class CourseService {
           type: true,
           statement: true,
           tag: true,
+          language: true,
           metadata: true,
           marks: true,
           expectedTime: true,
@@ -987,14 +990,26 @@ export class CourseService {
     }
   }
 
-  async getQuestions(dto: GetQuestionsDto): Promise<GetQuestionsResponse> {
+  async getQuestions(
+    dto: GetQuestionsDto,
+    userId: string,
+  ): Promise<GetQuestionsResponse> {
     try {
+      // Get user's language preference
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { language: true },
+      });
+
+      const userLanguage = user?.language || 'en';
+
       const page = dto.page || 1;
       const limit = dto.limit || 10;
       const skip = (page - 1) * limit;
 
       const where: any = {
         isDeleted: false, // Only get non-deleted questions
+        language: userLanguage, // Filter by user's language
       };
 
       if (dto.lessonId) {
@@ -1021,6 +1036,7 @@ export class CourseService {
           type: true,
           statement: true,
           tag: true,
+          language: true,
           marks: true,
           expectedTime: true,
           isActive: true,
@@ -1080,6 +1096,7 @@ export class CourseService {
       if (dto.type !== undefined) updateData.type = dto.type;
       if (dto.statement !== undefined) updateData.statement = dto.statement;
       if (dto.tag !== undefined) updateData.tag = dto.tag;
+      if (dto.language !== undefined) updateData.language = dto.language;
       if (dto.metadata !== undefined) updateData.metadata = dto.metadata;
       if (dto.marks !== undefined) updateData.marks = dto.marks;
       if (dto.expectedTime !== undefined) updateData.expectedTime = dto.expectedTime;
@@ -1093,6 +1110,7 @@ export class CourseService {
           type: true,
           statement: true,
           tag: true,
+          language: true,
           metadata: true,
           marks: true,
           expectedTime: true,
@@ -1663,6 +1681,14 @@ export class CourseService {
         });
       }
 
+      // Get user's language preference
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { language: true },
+      });
+
+      const userLanguage = user?.language || 'en';
+
       const page = dto.page || 1;
       const limit = dto.limit || 10;
       const skip = (page - 1) * limit;
@@ -1671,6 +1697,7 @@ export class CourseService {
       const where: any = {
         lessonId,
         isDeleted: false, // Only get non-deleted questions
+        language: userLanguage, // Filter by user's language
       };
 
       // Filter by tags if provided
@@ -1685,6 +1712,7 @@ export class CourseService {
         const questionFilter: any = {
           lessonId,
           isDeleted: false,
+          language: userLanguage, // Filter by user's language
         };
 
         // Apply tag filter to bookmarked questions query if provided
@@ -1743,6 +1771,7 @@ export class CourseService {
           type: true,
           statement: true,
           tag: true,
+          language: true,
           metadata: true,
           marks: true,
           expectedTime: true,
